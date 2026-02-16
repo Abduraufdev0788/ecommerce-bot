@@ -2,24 +2,33 @@ from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ContextTypes
 from config import ADMIN_ID
 from handlers.admin_panel import admin_panel
+from database import db
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    # 🧑‍💼 ADMIN
-    if update.effective_user.id == ADMIN_ID:
+    telegram_id = update.effective_user.id
 
-        # Agar oldin reply keyboard bo‘lgan bo‘lsa o‘chirib tashlaymiz
+    # 🔥 USERNI DB GA SAQLAYMIZ
+    async with db.pool.acquire() as conn:
+        await conn.execute("""
+            INSERT INTO users (telegram_id)
+            VALUES ($1)
+            ON CONFLICT (telegram_id) DO NOTHING
+        """, telegram_id)
+
+    # 🧑‍💼 ADMIN
+    if telegram_id == ADMIN_ID:
+
         await update.message.reply_text(
             "🧑‍💼 Admin panelga xush kelibsiz",
             reply_markup=ReplyKeyboardRemove()
         )
 
-        # Inline dashboard ochamiz
         await admin_panel(update, context)
         return
 
-    # 👤 USER
+    # 👤 USER MENU
     keyboard = [
         ["📦 Mahsulotlar", "🛒 Savatcham"],
         ["📦 Buyurtmalarim", "ℹ️ Yordam"]

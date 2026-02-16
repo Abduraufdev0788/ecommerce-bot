@@ -33,4 +33,4 @@ async def payment_timeout_checker(app):
                     text=f"⏳ Order ID {order['id']} bekor qilindi.\nTo‘lov muddati tugadi."
                 )
 
-        await asyncio.sleep(60)  # har 1 daqiqada tekshiradi
+        await asyncio.sleep(300)

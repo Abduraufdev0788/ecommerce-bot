@@ -132,6 +132,8 @@ async def build_summary(context, telegram_id):
             "SELECT id FROM users WHERE telegram_id=$1",
             telegram_id
         )
+        if user is None:
+            return "Foydalanuvchi topilmadi."
         user_id = user["id"]
 
         total = 0
