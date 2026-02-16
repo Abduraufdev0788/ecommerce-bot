@@ -22,7 +22,7 @@ from handlers.admin import (
     cancel
 )
 from handlers.products import show_products, add_to_cart
-from handlers.cart import show_cart
+from handlers.cart import show_cart, edit_cart_quantity_start, update_cart_quantity
 from handlers.payments import receive_payment
 from handlers.checkout import (
     start_checkout_cart,
@@ -43,8 +43,28 @@ from handlers.orders import show_orders, order_detail
 # States
 from states import (
     NAME, DESCRIPTION, PRICE, QUANTITY, IMAGE,
-    FULLNAME, PHONE, LOCATION, CONFIRM, QUANTITY_SELECT
+    FULLNAME, PHONE, LOCATION, CONFIRM, QUANTITY_SELECT, EDIT_CART_QTY
 )
+from handlers.help import show_help
+
+from handlers.admin_panel import (
+    admin_panel,
+    admin_stats,
+    admin_orders,
+    admin_products
+)
+from handlers.payment_timeout import payment_timeout_checker
+
+from handlers.admin_orders import (
+    admin_orders_menu,
+    admin_orders_list,
+    admin_order_detail
+)
+from handlers.ads import send_random_ad
+
+
+
+
 
 
 # =========================
@@ -55,6 +75,10 @@ async def on_startup(app):
     await db.connect()
     await db.create_tables()
     print("Database connected ✅")
+
+    # 🔥 Background timeout task
+    app.create_task(payment_timeout_checker(app))
+
 
 
 # =========================
@@ -152,6 +176,35 @@ def main():
     app.add_handler(CallbackQueryHandler(admin_cancel, pattern="^admin_cancel:"))
     app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📦 Buyurtmalarim$"), show_orders))
     app.add_handler(CallbackQueryHandler(order_detail, pattern="^order_detail:"))
+
+    cart_edit_conv = ConversationHandler(
+    entry_points=[
+        CallbackQueryHandler(edit_cart_quantity_start, pattern="^edit_cart:")
+    ],
+    states={
+        EDIT_CART_QTY: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, update_cart_quantity)
+        ]
+    },
+    fallbacks=[]
+)
+
+    app.add_handler(cart_edit_conv)
+
+    app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^ℹ️ Yordam$"), show_help))
+
+    app.add_handler(CommandHandler("admin", admin_panel))
+
+    app.add_handler(CallbackQueryHandler(admin_stats, pattern="^admin_stats$"))
+    app.add_handler(CallbackQueryHandler(admin_orders, pattern="^admin_orders$"))
+    app.add_handler(CallbackQueryHandler(admin_products, pattern="^admin_products$"))
+
+    app.add_handler(CallbackQueryHandler(admin_orders_menu, pattern="^admin_orders$"))
+    app.add_handler(CallbackQueryHandler(admin_orders_list, pattern="^orders_"))
+    app.add_handler(CallbackQueryHandler(admin_order_detail, pattern="^order_detail_admin:"))
+
+
+
 
 
     print("Bot ishga tushdi 🚀")

@@ -11,4 +11,5 @@ ADMIN_ID = int(os.getenv("ADMIN_ID"))
 CARD_NUMBER = os.getenv("CARD_NUMBER")
 CARD_OWNER = os.getenv("CARD_OWNER")
 
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
 

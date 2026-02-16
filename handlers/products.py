@@ -1,6 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from database import db
+from handlers.ads import send_random_ad
 
 
 async def show_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -13,21 +14,6 @@ async def show_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for product in products:
 
-        keyboard = [
-            [
-                InlineKeyboardButton(
-                    "🛒 Savatchaga qo‘shish",
-                    callback_data=f"add:{product['id']}"
-                ),
-                InlineKeyboardButton(
-                    "💳 Hozir sotib olish",
-                    callback_data=f"buy:{product['id']}"
-                )
-            ]
-        ]
-
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
         caption = (
             f"📦 {product['name']}\n"
             f"📝 {product['description']}\n"
@@ -35,11 +21,32 @@ async def show_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📦 Qolgan: {product['quantity']}"
         )
 
+        # 🔒 Stock protection
+        if product["quantity"] > 0:
+            reply_markup = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton(
+                        "🛒 Savatchaga qo‘shish",
+                        callback_data=f"add:{product['id']}"
+                    ),
+                    InlineKeyboardButton(
+                        "💳 Hozir sotib olish",
+                        callback_data=f"buy:{product['id']}"
+                    )
+                ]
+            ])
+        else:
+            caption += "\n\n❌ Sotuvda yo‘q"
+            reply_markup = None  # 🔥 tugma chiqmaydi
+
         await update.message.reply_photo(
             photo=product["image"],
             caption=caption,
             reply_markup=reply_markup
         )
+        await send_random_ad(update, context)
+
+
 
 
 async def add_to_cart(update: Update, context: ContextTypes.DEFAULT_TYPE):

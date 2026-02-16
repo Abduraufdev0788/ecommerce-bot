@@ -7,6 +7,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from database import db
 from states import FULLNAME, PHONE, LOCATION, CONFIRM, QUANTITY_SELECT
 from config import CARD_NUMBER, CARD_OWNER, ADMIN_ID
+from datetime import datetime, timedelta
 
 
 # =========================
@@ -146,11 +147,20 @@ async def build_summary(context, telegram_id):
 
         else:
             product_id = context.user_data["product_id"]
-            items = await conn.fetch("""
-                SELECT name, price, 1 as count
+            product = await conn.fetchrow("""
+                SELECT name, price
                 FROM products
                 WHERE id=$1
             """, product_id)
+
+        quantity = context.user_data["selected_quantity"]
+
+        items = [{
+            "name": product["name"],
+            "price": product["price"],
+            "count": quantity
+        }]
+
 
         for item in items:
             subtotal = item["price"] * item["count"]
@@ -186,12 +196,14 @@ async def confirm_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         user_id = user["id"]
 
+        expires_at = datetime.utcnow() + timedelta(minutes=15)
+
         order = await conn.fetchrow("""
             INSERT INTO orders (
                 user_id, total_price, fullname, phone,
-                latitude, longitude
+                latitude, longitude, expires_at
             )
-            VALUES ($1,$2,$3,$4,$5,$6)
+            VALUES ($1,$2,$3,$4,$5,$6,$7)
             RETURNING id
         """,
             user_id,
@@ -199,9 +211,9 @@ async def confirm_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data["fullname"],
             context.user_data["phone"],
             context.user_data["latitude"],
-            context.user_data["longitude"]
+            context.user_data["longitude"],
+            expires_at
         )
-
         order_id = order["id"]
 
         # order items
@@ -225,7 +237,7 @@ async def confirm_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await conn.execute("""
                 INSERT INTO order_items (order_id, product_id, count)
                 VALUES ($1,$2,$3)
-            """, order_id, context.user_data["product_id"], context.user_data["quantity"])
+            """, order_id, context.user_data["product_id"], context.user_data["selected_quantity"])
 
     await query.message.reply_text(
         f"💳 To‘lov qiling:\n\n"
